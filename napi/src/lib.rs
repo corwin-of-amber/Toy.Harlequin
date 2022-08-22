@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate napi_derive;
 
-use libc::c_int;
+use libc::{c_double, c_int};
 
 #[repr(C)]
 #[allow(non_camel_case_types)]
@@ -21,6 +21,8 @@ pub struct fluid_audio_driver_t { #[allow(dead_code)] dummy: u32 }
 extern {
   fn new_fluid_settings() -> *mut fluid_settings_t;
   fn new_fluid_synth(settings: *mut fluid_settings_t) -> *mut fluid_synth_t;
+  // settings.h
+  fn fluid_settings_setnum(settings: *mut fluid_settings_t, name: *const u8, val: c_double) -> c_int;
   // sfont.h
   fn fluid_synth_sfload(synth: *mut fluid_synth_t, filename: *const u8, reset_presets: c_int) -> c_int;
   // synth.h
@@ -34,27 +36,23 @@ extern {
 
 struct Opaque<T> { ptr: *mut T }
 
+/* unfortunately, cannot `#[napi]` a generic type */
+
 #[napi]
 pub struct FluidSettings { o: Opaque<fluid_settings_t> }
 #[napi]
 pub struct FluidSynth { o: Opaque<fluid_synth_t> }
 #[napi]
-pub struct FluidAudioDriver { #[allow(dead_code)] o: Opaque<fluid_audio_driver_t> }
-
+pub struct FluidAudioDriver { o: Opaque<fluid_audio_driver_t> }
 
 #[napi]
 impl FluidSettings {
   pub fn from(ptr: *mut fluid_settings_t) -> Self {
     Self { o: Opaque { ptr } }
   }
-
-  #[napi(factory, js_name = "new_fluid_settings")]
-  pub fn new_fluid_settings() -> Self {
-    Self::from(unsafe { new_fluid_settings() })
-  }
 }
 
-#[napi(js_name = "new_fluid_settings_etc")]
+#[napi(js_name = "new_fluid_settings")]
 pub fn js_new_fluid_settings() -> FluidSettings {
   FluidSettings::from(unsafe { new_fluid_settings() })
 }
@@ -65,23 +63,24 @@ impl FluidSynth {
   pub fn from(ptr: *mut fluid_synth_t) -> Self {
     Self { o: Opaque { ptr } }
   }
-
-  #[napi(factory, js_name = "new_fluid_synth")]
-  pub fn new_fluid_synth(settings: &FluidSettings) -> Self {
-    Self::from(unsafe { new_fluid_synth(settings.o.ptr) })
-  }
 }
+
+#[napi(js_name = "new_fluid_synth")]
+pub fn js_new_fluid_synth(settings: &FluidSettings) -> FluidSynth {
+  FluidSynth::from(unsafe { new_fluid_synth(settings.o.ptr) })
+}
+
 
 #[napi]
 impl FluidAudioDriver {
   pub fn from(ptr: *mut fluid_audio_driver_t) -> Self {
     Self { o: Opaque { ptr } }
   }
+}
 
-  #[napi(factory, js_name = "new_fluid_audio_driver")]
-  pub fn new_fluid_audio_driver(settings: &FluidSettings, synth: &FluidSynth) -> Self {
-    Self::from(unsafe { new_fluid_audio_driver(settings.o.ptr, synth.o.ptr) })
-  }
+#[napi(js_name = "new_fluid_audio_driver")]
+pub fn js_new_fluid_audio_driver(settings: &FluidSettings, synth: &FluidSynth) -> FluidAudioDriver {
+  FluidAudioDriver::from(unsafe { new_fluid_audio_driver(settings.o.ptr, synth.o.ptr) })
 }
 
 #[napi(js_name = "fluid_synth_sfload")]
@@ -105,4 +104,9 @@ fn js_fluid_synth_noteon(synth: &FluidSynth, chan: c_int, key: c_int, vel: c_int
 #[napi(js_name = "fluid_synth_noteoff")]
 fn js_fluid_synth_noteoff(synth: &FluidSynth, chan: c_int, key: c_int) -> c_int {
   unsafe { fluid_synth_noteoff(synth.o.ptr, chan, key) }
+}
+
+#[napi(js_name = "fluid_settings_setnum")]
+fn js_fluid_settings_setnum(settings: &FluidSettings, name: String, val: c_double) -> c_int {
+  unsafe { fluid_settings_setnum(settings.o.ptr, name.as_ptr(), val) }
 }

@@ -1,6 +1,6 @@
 [package]
 edition = "2018"
-name = "fluidsynth"
+name = "fluidsynth-napi"
 version = "0.0.0"
 
 [lib]
