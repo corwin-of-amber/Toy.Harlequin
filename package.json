@@ -1,0 +1,13 @@
+{
+    "name": "fluidsynth-playful",
+    "version": "0.1.0",
+    "main": "build/kremlin/index.html",
+    "dependencies": {
+        "lodash": "^4.17.21",
+        "vue": "^3.2.37"
+    },
+    "devDependencies": {
+        "@types/lodash": "^4.14.184",
+        "@types/node": "^18.7.8"
+    }
+}
